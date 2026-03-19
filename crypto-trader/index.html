@@ -638,18 +638,7 @@
             <div class="trade-form">
                 <div class="input-group">
                     <label>交易对</label>
-                    <select id="tradingPair">
-                        <option value="BTCUSDT">BTC/USDT</option>
-                        <option value="ETHUSDT">ETH/USDT</option>
-                        <option value="BNBUSDT">BNB/USDT</option>
-                        <option value="SOLUSDT">SOL/USDT</option>
-                        <option value="XRPUSDT">XRP/USDT</option>
-                        <option value="ADAUSDT">ADA/USDT</option>
-                        <option value="DOGEUSDT">DOGE/USDT</option>
-                        <option value="AVAXUSDT">AVAX/USDT</option>
-                        <option value="DOTUSDT">DOT/USDT</option>
-                        <option value="MATICUSDT">MATIC/USDT</option>
-                    </select>
+                    <input type="text" id="tradingPair" placeholder="如: BTC/USDT" style="text-transform: uppercase;">
                 </div>
                 <div class="input-group">
                     <label>买入价格</label>
@@ -993,14 +982,6 @@
             });
         }
 
-        function setCapital() {
-            const input = document.getElementById('totalCapital');
-            totalCapital = parseFloat(input.value) || 0;
-            if (totalCapital > 0) {
-                updateStats();
-            }
-        }
-
         function selectOrderType(type) {
             orderType = type;
             document.getElementById('limitBtn').classList.toggle('active', type === 'limit');
@@ -1023,81 +1004,6 @@
             editingId = null;
             document.querySelector('.panel-title').textContent = '添加交割单';
             document.querySelector('.btn-primary').textContent = '添加记录';
-        }
-
-        function editTrade(id) {
-            const trade = trades.find(t => t.id === id);
-            if (!trade) return;
-
-            editingId = id;
-            document.getElementById('tradingPair').value = trade.pair;
-            document.getElementById('buyPrice').value = trade.buyPrice;
-            document.getElementById('positionSize').value = trade.positionSize;
-            document.getElementById('sellPrice').value = trade.sellPrice || '';
-            
-            selectOrderType(trade.type);
-            selectDirection(trade.direction);
-
-            // Update UI
-            document.querySelector('.panel-title').textContent = '编辑交割单';
-            document.querySelector('.btn-primary').textContent = '保存修改';
-            
-            // Scroll to form
-            document.querySelector('.trade-form').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function addTrade() {
-            const pair = document.getElementById('tradingPair').value;
-            const buyPrice = parseFloat(document.getElementById('buyPrice').value);
-            const positionSize = parseFloat(document.getElementById('positionSize').value) || 1;
-            const sellPrice = parseFloat(document.getElementById('sellPrice').value);
-
-            if (!buyPrice || buyPrice <= 0) {
-                alert('请输入有效的买入价格');
-                return;
-            }
-
-            const fee = orderType === 'market' ? buyPrice * positionSize * 0.0004 : 0;
-            let pnl = 0;
-            if (sellPrice && sellPrice > 0) {
-                // Calculate PnL based on direction
-                if (direction === 'long') {
-                    pnl = (sellPrice - buyPrice) * positionSize;
-                } else {
-                    pnl = (buyPrice - sellPrice) * positionSize;
-                }
-            }
-
-            const existingTrade = editingId ? trades.find(t => t.id === editingId) : null;
-            const trade = {
-                id: editingId || Date.now(),
-                date: existingTrade ? existingTrade.date : new Date().toLocaleString('zh-CN'),
-                pair: pair,
-                buyPrice: buyPrice,
-                positionSize: positionSize,
-                sellPrice: sellPrice || null,
-                pnl: pnl,
-                type: orderType,
-                direction: direction,
-                fee: fee
-            };
-
-            if (editingId) {
-                const index = trades.findIndex(t => t.id === editingId);
-                trades[index] = trade;
-            } else {
-                trades.push(trade);
-            }
-            
-            renderTable();
-            updateStats();
-            clearForm();
-        }
-
-        function deleteTrade(id) {
-            trades = trades.filter(t => t.id !== id);
-            renderTable();
-            updateStats();
         }
 
         function renderTable() {
@@ -1138,31 +1044,30 @@
             const marketCount = trades.filter(t => t.type === 'market').length;
             const totalFee = trades.reduce((sum, t) => sum + t.fee, 0);
             
-            // Calculate PnL with direction consideration
-            trades.forEach(t => {
-                if (t.sellPrice && t.sellPrice > 0) {
-                    if (t.direction === 'long') {
-                        t.pnl = (t.sellPrice - t.buyPrice) * t.positionSize;
-                    } else {
-                        t.pnl = (t.buyPrice - t.sellPrice) * t.positionSize;
-                    }
+            // Get closed trades
+            const closedTrades = trades.filter(t => t.sellPrice && t.sellPrice > 0);
+            
+            // Calculate PnL for each closed trade (without mutating original data)
+            const calculatedPnLs = closedTrades.map(t => {
+                if (t.direction === 'long') {
+                    return (t.sellPrice - t.buyPrice) * t.positionSize;
+                } else {
+                    return (t.buyPrice - t.sellPrice) * t.positionSize;
                 }
             });
             
-            const closedTrades = trades.filter(t => t.sellPrice && t.sellPrice > 0);
-            const totalPnl = closedTrades.reduce((sum, t) => sum + t.pnl, 0);
+            const totalPnl = calculatedPnLs.reduce((sum, pnl) => sum + pnl, 0);
             
-            // Max Profit & Max Loss
+            // Max Profit & Max Loss - handle edge cases properly
             let maxProfit = 0;
             let maxLoss = 0;
-            if (closedTrades.length > 0) {
-                const pnls = closedTrades.map(t => t.pnl);
-                maxProfit = Math.max(...pnls);
-                maxLoss = Math.min(...pnls);
+            if (calculatedPnLs.length > 0) {
+                maxProfit = Math.max(...calculatedPnLs);
+                maxLoss = Math.min(...calculatedPnLs);
             }
             
-            const winningTrades = closedTrades.filter(t => t.pnl > 0).length;
-            const winRate = closedTrades.length > 0 ? (winningTrades / closedTrades.length * 100) : 0;
+            const winningTrades = calculatedPnLs.filter(pnl => pnl > 0).length;
+            const winRate = calculatedPnLs.length > 0 ? (winningTrades / calculatedPnLs.length * 100) : 0;
             
             const currentEquity = totalCapital - totalFee + totalPnl;
             const profitRate = totalCapital > 0 ? ((currentEquity - totalCapital) / totalCapital * 100) : 0;
@@ -1175,12 +1080,22 @@
             document.getElementById('profitRate').textContent = profitRate.toFixed(2) + '%';
             
             const maxProfitEl = document.getElementById('maxProfit');
-            maxProfitEl.textContent = maxProfit >= 0 ? '+' + maxProfit.toFixed(2) : maxProfit.toFixed(2);
-            maxProfitEl.style.color = maxProfit >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
+            if (maxProfit > 0) {
+                maxProfitEl.textContent = '+' + maxProfit.toFixed(2);
+                maxProfitEl.style.color = 'var(--neon-green)';
+            } else {
+                maxProfitEl.textContent = '0.00';
+                maxProfitEl.style.color = 'var(--neon-green)';
+            }
             
             const maxLossEl = document.getElementById('maxLoss');
-            maxLossEl.textContent = maxLoss >= 0 ? '+' + maxLoss.toFixed(2) : maxLoss.toFixed(2);
-            maxLossEl.style.color = maxLoss >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
+            if (maxLoss < 0) {
+                maxLossEl.textContent = maxLoss.toFixed(2);
+                maxLossEl.style.color = 'var(--neon-red)';
+            } else {
+                maxLossEl.textContent = '0.00';
+                maxLossEl.style.color = 'var(--neon-red)';
+            }
             
             document.getElementById('winRate').textContent = winRate.toFixed(1) + '%';
 
@@ -1188,12 +1103,18 @@
             equityChart.data.labels = trades.map((_, i) => `#${i + 1}`);
             let runningEquity = totalCapital;
             equityChart.data.datasets[0].data = trades.map(t => {
-                runningEquity = runningEquity - t.fee + t.pnl;
+                let pnl = 0;
+                if (t.sellPrice && t.sellPrice > 0) {
+                    pnl = t.direction === 'long' 
+                        ? (t.sellPrice - t.buyPrice) * t.positionSize 
+                        : (t.buyPrice - t.sellPrice) * t.positionSize;
+                }
+                runningEquity = runningEquity - t.fee + pnl;
                 return runningEquity;
             });
             equityChart.update();
 
-            // Update Type Chart - Limit vs Market orders
+            // Update Type Chart
             typeChart.data.labels = ['挂单', '吃单'];
             typeChart.data.datasets[0].data = [limitCount, marketCount];
             typeChart.update();

@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoTrader - 交易日志系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #f0ff00;
+            --neon-green: #00ff66;
+            --neon-red: #ff3366;
+            --dark-bg: #0a0a0f;
+            --dark-panel: #0d0d14;
+            --dark-card: #14141c;
+            --text-primary: #e0e0e0;
+            --text-secondary: #6a6a8a;
+            --border-glow: rgba(0, 243, 255, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Particle Canvas */
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 25px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 35px;
+            padding: 25px 0;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: 12px;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta), var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            letter-spacing: 6px;
+            text-transform: uppercase;
+        }
+
+        /* Panel Base */
+        .panel {
+            background: linear-gradient(145deg, var(--dark-panel), rgba(20, 20, 30, 0.8));
+            border: 1px solid rgba(0, 243, 255, 0.15);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 20px;
+            right: 20px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+        }
+
+        .panel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.95rem;
+            color: var(--neon-cyan);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: 3px;
+        }
+
+        .panel-title::before {
+            content: '▸';
+            color: var(--neon-magenta);
+            font-size: 0.8rem;
+        }
+
+        /* Two Column Layout */
+        .panel-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1200px) {
+            .panel-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Capital Section */
+        .capital-section {
+            display: flex;
+            gap: 20px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--dark-card);
+            border: 1px solid rgba(0, 243, 255, 0.25);
+            border-radius: 6px;
+            color: var(--neon-cyan);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--neon-magenta);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.2), inset 0 0 20px rgba(0, 243, 255, 0.05);
+        }
+
+        .input-group input::placeholder {
+            color: var(--text-secondary);
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 14px 32px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--neon-cyan), #0088aa);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 1px solid var(--neon-red);
+            color: var(--neon-red);
+            padding: 8px 14px;
+            font-size: 0.75rem;
+        }
+
+        .btn-danger:hover {
+            background: var(--neon-red);
+            color: #000;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 1400px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: var(--dark-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 18px 15px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(0, 243, 255, 0.3);
+            transform: translateY(-3px);
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40%;
+            height: 2px;
+            background: var(--neon-cyan);
+            opacity: 0.5;
+        }
+
+        .stat-card.magenta::after { background: var(--neon-magenta); }
+        .stat-card.yellow::after { background: var(--neon-yellow); }
+        .stat-card.green::after { background: var(--neon-green); }
+        .stat-card.red::after { background: var(--neon-red); }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--neon-cyan);
+        }
+
+        .stat-card.magenta .stat-value { color: var(--neon-magenta); }
+        .stat-card.yellow .stat-value { color: var(--neon-yellow); }
+        .stat-card.green .stat-value { color: var(--neon-green); }
+        .stat-card.red .stat-value { color: var(--neon-red); }
+
+        /* Charts */
+        .charts-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container {
+            background: var(--dark-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 20px;
+            height: 320px;
+        }
+
+        .chart-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Trade Form */
+        .trade-form {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            align-items: end;
+        }
+
+        @media (max-width: 1400px) {
+            .trade-form {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .trade-form {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .order-type-selector {
+            display: flex;
+            gap: 10px;
+        }
+
+        .order-type-btn {
+            flex: 1;
+            padding: 14px;
+            background: var(--dark-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .order-type-btn.active {
+            background: rgba(0, 243, 255, 0.1);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+
+        .order-type-btn.limit.active {
+            border-color: var(--neon-yellow);
+            color: var(--neon-yellow);
+            background: rgba(240, 255, 0, 0.1);
+        }
+
+        .order-type-btn.direction {
+            flex: 1;
+            padding: 14px;
+            background: var(--dark-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .order-type-btn.direction.active {
+            background: rgba(0, 243, 255, 0.1);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+
+        .order-type-btn.direction.long.active {
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+            background: rgba(0, 255, 102, 0.1);
+        }
+
+        .order-type-btn.direction.short.active {
+            border-color: var(--neon-red);
+            color: var(--neon-red);
+            background: rgba(255, 51, 102, 0.1);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--neon-magenta);
+            color: var(--neon-magenta);
+        }
+
+        .btn-secondary:hover {
+            background: var(--neon-magenta);
+            color: #000;
+        }
+
+        .fee-display {
+            background: var(--dark-card);
+            padding: 14px 18px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .fee-display span {
+            color: var(--neon-magenta);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: var(--dark-card);
+            padding: 16px 14px;
+            text-align: left;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--neon-cyan);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        tr:hover td {
+            background: rgba(0, 243, 255, 0.03);
+        }
+
+        .type-tag {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .type-limit {
+            background: rgba(240, 255, 0, 0.12);
+            color: var(--neon-yellow);
+            border: 1px solid rgba(240, 255, 0, 0.3);
+        }
+
+        .type-market {
+            background: rgba(255, 0, 255, 0.12);
+            color: var(--neon-magenta);
+            border: 1px solid rgba(255, 0, 255, 0.3);
+        }
+
+        .dir-long {
+            background: rgba(0, 255, 102, 0.12);
+            color: var(--neon-green);
+            border: 1px solid rgba(0, 255, 102, 0.3);
+        }
+
+        .dir-short {
+            background: rgba(255, 51, 102, 0.12);
+            color: var(--neon-red);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+
+        .btn-edit {
+            background: transparent;
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 8px 14px;
+            font-size: 0.75rem;
+        }
+
+        .btn-edit:hover {
+            background: var(--neon-cyan);
+            color: #000;
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 1px solid var(--neon-red);
+            color: var(--neon-red);
+            padding: 8px 14px;
+            font-size: 0.75rem;
+        }
+
+        .btn-danger:hover {
+            background: var(--neon-red);
+            color: #000;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--neon-cyan);
+            border-radius: 3px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 1.4rem; letter-spacing: 6px; }
+            .subtitle { font-size: 0.7rem; letter-spacing: 3px; }
+            .container { padding: 15px; }
+            .panel { padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particles"></canvas>
+    
+    <div class="container">
+        <header>
+            <h1>CRYPTO TRADER</h1>
+            <div class="subtitle">合约交易日志系统</div>
+        </header>
+
+        <!-- 资金管理 -->
+        <div class="panel">
+            <div class="panel-title">资金管理</div>
+            <div class="capital-section">
+                <div class="input-group">
+                    <label>总资金 (USDT)</label>
+                    <input type="number" id="totalCapital" placeholder="输入总资金..." step="0.01">
+                </div>
+                <button class="btn btn-primary" onclick="setCapital()">确认资金</button>
+            </div>
+        </div>
+
+        <!-- 交易统计 -->
+        <div class="panel">
+            <div class="panel-title">交易统计</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">总交易次数</div>
+                    <div class="stat-value" id="totalTrades">0</div>
+                </div>
+                <div class="stat-card magenta">
+                    <div class="stat-label">挂单次数</div>
+                    <div class="stat-value" id="limitOrders">0</div>
+                </div>
+                <div class="stat-card yellow">
+                    <div class="stat-label">吃单次数</div>
+                    <div class="stat-value" id="marketOrders">0</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-label">总手续费</div>
+                    <div class="stat-value" id="totalFee">0</div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-label">当前权益</div>
+                    <div class="stat-value" id="currentEquity">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">收益率</div>
+                    <div class="stat-value" id="profitRate">0%</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-label">最大盈利</div>
+                    <div class="stat-value" id="maxProfit">0</div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-label">最大亏损</div>
+                    <div class="stat-value" id="maxLoss">0</div>
+                </div>
+                <div class="stat-card magenta">
+                    <div class="stat-label">胜率</div>
+                    <div class="stat-value" id="winRate">0%</div>
+                </div>
+            </div>
+
+            <div class="charts-section">
+                <div class="chart-container">
+                    <div class="chart-title">权益曲线</div>
+                    <canvas id="equityChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">交易类型分布</div>
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加交割单 -->
+        <div class="panel">
+            <div class="panel-title">添加交割单</div>
+            <div class="trade-form">
+                <div class="input-group">
+                    <label>交易对</label>
+                    <select id="tradingPair">
+                        <option value="BTCUSDT">BTC/USDT</option>
+                        <option value="ETHUSDT">ETH/USDT</option>
+                        <option value="BNBUSDT">BNB/USDT</option>
+                        <option value="SOLUSDT">SOL/USDT</option>
+                        <option value="XRPUSDT">XRP/USDT</option>
+                        <option value="ADAUSDT">ADA/USDT</option>
+                        <option value="DOGEUSDT">DOGE/USDT</option>
+                        <option value="AVAXUSDT">AVAX/USDT</option>
+                        <option value="DOTUSDT">DOT/USDT</option>
+                        <option value="MATICUSDT">MATIC/USDT</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>买入价格</label>
+                    <input type="number" id="buyPrice" placeholder="开仓价格" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>仓位数量</label>
+                    <input type="number" id="positionSize" placeholder="数量" step="0.001" value="1">
+                </div>
+                <div class="input-group">
+                    <label>平仓价格</label>
+                    <input type="number" id="sellPrice" placeholder="平仓价格(可选)" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>交易类型</label>
+                    <div class="order-type-selector">
+                        <div class="order-type-btn limit active" onclick="selectOrderType('limit')" id="limitBtn">挂单</div>
+                        <div class="order-type-btn market" onclick="selectOrderType('market')" id="marketBtn">吃单</div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>方向</label>
+                    <div class="order-type-selector">
+                        <div class="order-type-btn direction long active" onclick="selectDirection('long')" id="longBtn">做多</div>
+                        <div class="order-type-btn direction short" onclick="selectDirection('short')" id="shortBtn">做空</div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>&nbsp;</label>
+                    <div class="fee-display">手续费: <span id="feeText">0%</span></div>
+                </div>
+            </div>
+            <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="clearForm()">清空</button>
+                <button class="btn btn-primary" onclick="addTrade()">添加记录</button>
+            </div>
+        </div>
+
+        <!-- 交易记录 -->
+        <div class="panel">
+            <div class="panel-title">交易记录</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>交易对</th>
+                            <th>方向</th>
+                            <th>仓位</th>
+                            <th>买入价</th>
+                            <th>平仓价</th>
+                            <th>盈亏</th>
+                            <th>类型</th>
+                            <th>手续费</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tradeTable">
+                        <tr>
+                            <td colspan="9" class="empty-state">暂无交易记录</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================
+        // Particle Animation
+        // =====================
+        const canvas = document.getElementById('particles');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.1;
+                this.color = Math.random() > 0.5 ? '#00f3ff' : '#ff00ff';
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.opacity -= 0.002;
+
+                if (this.opacity <= 0 || this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.opacity;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            const numParticles = Math.min(100, (canvas.width * canvas.height) / 15000);
+            for (let i = 0; i < numParticles; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw connections
+            particles.forEach((p1, i) => {
+                particles.slice(i + 1).forEach(p2 => {
+                    const dx = p1.x - p2.x;
+                    const dy = p1.y - p2.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 120) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = '#00f3ff';
+                        ctx.globalAlpha = (1 - dist / 120) * 0.15;
+                        ctx.lineWidth = 0.5;
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                        ctx.globalAlpha = 1;
+                    }
+                });
+            });
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            requestAnimationFrame(animateParticles);
+        }
+
+        resizeCanvas();
+        initParticles();
+        animateParticles();
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initParticles();
+        });
+
+        // =====================
+        // API Configuration
+        // =====================
+        const API_BASE = 'http://localhost:3001/api';
+        
+        // =====================
+        // Trading Logic
+        // =====================
+        let totalCapital = 0;
+        let trades = [];
+        let orderType = 'limit';
+        let direction = 'long';
+        let editingId = null;
+        let equityChart, typeChart;
+
+        // =====================
+        // API Functions
+        // =====================
+        async function loadData() {
+            try {
+                const response = await fetch(`${API_BASE}/data`);
+                const data = await response.json();
+                totalCapital = data.capital || 0;
+                trades = data.trades || [];
+                document.getElementById('totalCapital').value = totalCapital || '';
+                renderTable();
+                updateStats();
+            } catch (err) {
+                console.error('Failed to load data:', err);
+            }
+        }
+
+        async function setCapital() {
+            const input = document.getElementById('totalCapital');
+            totalCapital = parseFloat(input.value) || 0;
+            
+            try {
+                await fetch(`${API_BASE}/capital`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ capital: totalCapital })
+                });
+                updateStats();
+            } catch (err) {
+                console.error('Failed to save capital:', err);
+            }
+        }
+
+        async function addTrade() {
+            const pair = document.getElementById('tradingPair').value;
+            const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+            const positionSize = parseFloat(document.getElementById('positionSize').value) || 1;
+            const sellPrice = parseFloat(document.getElementById('sellPrice').value);
+
+            if (!buyPrice || buyPrice <= 0) {
+                alert('请输入有效的买入价格');
+                return;
+            }
+
+            const fee = orderType === 'market' ? buyPrice * positionSize * 0.0004 : 0;
+
+            try {
+                if (editingId) {
+                    await fetch(`${API_BASE}/trades/${editingId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pair, buyPrice, positionSize, sellPrice, type: orderType, direction, fee })
+                    });
+                } else {
+                    await fetch(`${API_BASE}/trades`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pair, buyPrice, positionSize, sellPrice, type: orderType, direction, fee })
+                    });
+                }
+                
+                await loadData();
+                clearForm();
+            } catch (err) {
+                console.error('Failed to save trade:', err);
+                alert('保存失败，请确保后端服务正在运行');
+            }
+        }
+
+        async function deleteTrade(id) {
+            if (!confirm('确定要删除这条记录吗？')) return;
+            
+            try {
+                await fetch(`${API_BASE}/trades/${id}`, {
+                    method: 'DELETE'
+                });
+                await loadData();
+            } catch (err) {
+                console.error('Failed to delete trade:', err);
+            }
+        }
+
+        async function editTrade(id) {
+            const trade = trades.find(t => t.id === id);
+            if (!trade) return;
+
+            editingId = id;
+            document.getElementById('tradingPair').value = trade.pair;
+            document.getElementById('buyPrice').value = trade.buyPrice;
+            document.getElementById('positionSize').value = trade.positionSize;
+            document.getElementById('sellPrice').value = trade.sellPrice || '';
+            
+            selectOrderType(trade.type);
+            selectDirection(trade.direction);
+
+            document.querySelector('.panel-title').textContent = '编辑交割单';
+            document.querySelector('.btn-primary').textContent = '保存修改';
+            
+            document.querySelector('.trade-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function initCharts() {
+            Chart.defaults.color = '#6a6a8a';
+            Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+
+            const equityCtx = document.getElementById('equityChart').getContext('2d');
+            equityChart = new Chart(equityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '权益',
+                        data: [],
+                        borderColor: '#00f3ff',
+                        backgroundColor: (context) => {
+                            const ctx = context.chart.ctx;
+                            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                            gradient.addColorStop(0, 'rgba(0, 243, 255, 0.3)');
+                            gradient.addColorStop(1, 'rgba(0, 243, 255, 0)');
+                            return gradient;
+                        },
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#00f3ff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.03)' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.03)' } }
+                    }
+                }
+            });
+
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            typeChart = new Chart(typeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['挂单', '吃单'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['rgba(240, 255, 0, 0.8)', 'rgba(255, 0, 255, 0.8)'],
+                        borderColor: ['#f0ff00', '#ff00ff'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 20, usePointStyle: true }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function setCapital() {
+            const input = document.getElementById('totalCapital');
+            totalCapital = parseFloat(input.value) || 0;
+            if (totalCapital > 0) {
+                updateStats();
+            }
+        }
+
+        function selectOrderType(type) {
+            orderType = type;
+            document.getElementById('limitBtn').classList.toggle('active', type === 'limit');
+            document.getElementById('marketBtn').classList.toggle('active', type === 'market');
+            document.getElementById('feeText').textContent = type === 'limit' ? '0%' : '0.04%';
+        }
+
+        function selectDirection(dir) {
+            direction = dir;
+            document.getElementById('longBtn').classList.toggle('active', dir === 'long');
+            document.getElementById('shortBtn').classList.toggle('active', dir === 'short');
+        }
+
+        function clearForm() {
+            document.getElementById('buyPrice').value = '';
+            document.getElementById('positionSize').value = '1';
+            document.getElementById('sellPrice').value = '';
+            selectOrderType('limit');
+            selectDirection('long');
+            editingId = null;
+            document.querySelector('.panel-title').textContent = '添加交割单';
+            document.querySelector('.btn-primary').textContent = '添加记录';
+        }
+
+        function editTrade(id) {
+            const trade = trades.find(t => t.id === id);
+            if (!trade) return;
+
+            editingId = id;
+            document.getElementById('tradingPair').value = trade.pair;
+            document.getElementById('buyPrice').value = trade.buyPrice;
+            document.getElementById('positionSize').value = trade.positionSize;
+            document.getElementById('sellPrice').value = trade.sellPrice || '';
+            
+            selectOrderType(trade.type);
+            selectDirection(trade.direction);
+
+            // Update UI
+            document.querySelector('.panel-title').textContent = '编辑交割单';
+            document.querySelector('.btn-primary').textContent = '保存修改';
+            
+            // Scroll to form
+            document.querySelector('.trade-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function addTrade() {
+            const pair = document.getElementById('tradingPair').value;
+            const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+            const positionSize = parseFloat(document.getElementById('positionSize').value) || 1;
+            const sellPrice = parseFloat(document.getElementById('sellPrice').value);
+
+            if (!buyPrice || buyPrice <= 0) {
+                alert('请输入有效的买入价格');
+                return;
+            }
+
+            const fee = orderType === 'market' ? buyPrice * positionSize * 0.0004 : 0;
+            let pnl = 0;
+            if (sellPrice && sellPrice > 0) {
+                // Calculate PnL based on direction
+                if (direction === 'long') {
+                    pnl = (sellPrice - buyPrice) * positionSize;
+                } else {
+                    pnl = (buyPrice - sellPrice) * positionSize;
+                }
+            }
+
+            const existingTrade = editingId ? trades.find(t => t.id === editingId) : null;
+            const trade = {
+                id: editingId || Date.now(),
+                date: existingTrade ? existingTrade.date : new Date().toLocaleString('zh-CN'),
+                pair: pair,
+                buyPrice: buyPrice,
+                positionSize: positionSize,
+                sellPrice: sellPrice || null,
+                pnl: pnl,
+                type: orderType,
+                direction: direction,
+                fee: fee
+            };
+
+            if (editingId) {
+                const index = trades.findIndex(t => t.id === editingId);
+                trades[index] = trade;
+            } else {
+                trades.push(trade);
+            }
+            
+            renderTable();
+            updateStats();
+            clearForm();
+        }
+
+        function deleteTrade(id) {
+            trades = trades.filter(t => t.id !== id);
+            renderTable();
+            updateStats();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tradeTable');
+            
+            if (trades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="empty-state">暂无交易记录</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = trades.map(t => {
+                const pnlClass = t.pnl > 0 ? 'style="color: var(--neon-green);"' : (t.pnl < 0 ? 'style="color: var(--neon-red);"' : '');
+                const pnlText = t.sellPrice ? `${t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(2)}` : '-';
+                const dirClass = t.direction === 'long' ? 'dir-long' : 'dir-short';
+                const dirText = t.direction === 'long' ? '做多' : '做空';
+                
+                return `
+                <tr>
+                    <td>${t.date}</td>
+                    <td style="color: var(--neon-cyan); font-weight: 600;">${t.pair}</td>
+                    <td><span class="type-tag ${dirClass}">${dirText}</span></td>
+                    <td>${t.positionSize}</td>
+                    <td>${t.buyPrice.toFixed(2)}</td>
+                    <td>${t.sellPrice ? t.sellPrice.toFixed(2) : '-'}</td>
+                    <td ${pnlClass}>${pnlText}</td>
+                    <td><span class="type-tag type-${t.type}">${t.type === 'limit' ? '挂单' : '吃单'}</span></td>
+                    <td style="color: var(--neon-magenta);">${t.fee.toFixed(4)}</td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editTrade(${t.id})" style="margin-right: 6px;">编辑</button>
+                        <button class="btn btn-danger" onclick="deleteTrade(${t.id})">删除</button>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        function updateStats() {
+            const limitCount = trades.filter(t => t.type === 'limit').length;
+            const marketCount = trades.filter(t => t.type === 'market').length;
+            const totalFee = trades.reduce((sum, t) => sum + t.fee, 0);
+            
+            // Calculate PnL with direction consideration
+            trades.forEach(t => {
+                if (t.sellPrice && t.sellPrice > 0) {
+                    if (t.direction === 'long') {
+                        t.pnl = (t.sellPrice - t.buyPrice) * t.positionSize;
+                    } else {
+                        t.pnl = (t.buyPrice - t.sellPrice) * t.positionSize;
+                    }
+                }
+            });
+            
+            const closedTrades = trades.filter(t => t.sellPrice && t.sellPrice > 0);
+            const totalPnl = closedTrades.reduce((sum, t) => sum + t.pnl, 0);
+            
+            // Max Profit & Max Loss
+            let maxProfit = 0;
+            let maxLoss = 0;
+            if (closedTrades.length > 0) {
+                const pnls = closedTrades.map(t => t.pnl);
+                maxProfit = Math.max(...pnls);
+                maxLoss = Math.min(...pnls);
+            }
+            
+            const winningTrades = closedTrades.filter(t => t.pnl > 0).length;
+            const winRate = closedTrades.length > 0 ? (winningTrades / closedTrades.length * 100) : 0;
+            
+            const currentEquity = totalCapital - totalFee + totalPnl;
+            const profitRate = totalCapital > 0 ? ((currentEquity - totalCapital) / totalCapital * 100) : 0;
+
+            document.getElementById('totalTrades').textContent = trades.length;
+            document.getElementById('limitOrders').textContent = limitCount;
+            document.getElementById('marketOrders').textContent = marketCount;
+            document.getElementById('totalFee').textContent = totalFee.toFixed(4);
+            document.getElementById('currentEquity').textContent = currentEquity.toFixed(2);
+            document.getElementById('profitRate').textContent = profitRate.toFixed(2) + '%';
+            
+            const maxProfitEl = document.getElementById('maxProfit');
+            maxProfitEl.textContent = maxProfit >= 0 ? '+' + maxProfit.toFixed(2) : maxProfit.toFixed(2);
+            maxProfitEl.style.color = maxProfit >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
+            
+            const maxLossEl = document.getElementById('maxLoss');
+            maxLossEl.textContent = maxLoss >= 0 ? '+' + maxLoss.toFixed(2) : maxLoss.toFixed(2);
+            maxLossEl.style.color = maxLoss >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
+            
+            document.getElementById('winRate').textContent = winRate.toFixed(1) + '%';
+
+            // Update Equity Chart
+            equityChart.data.labels = trades.map((_, i) => `#${i + 1}`);
+            let runningEquity = totalCapital;
+            equityChart.data.datasets[0].data = trades.map(t => {
+                runningEquity = runningEquity - t.fee + t.pnl;
+                return runningEquity;
+            });
+            equityChart.update();
+
+            // Update Type Chart - Limit vs Market orders
+            typeChart.data.labels = ['挂单', '吃单'];
+            typeChart.data.datasets[0].data = [limitCount, marketCount];
+            typeChart.update();
+        }
+
+        initCharts();
+        loadData();
+    </script>
+</body>
+</html>
